@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YouTube on TV</title>
+
+<link href="https://fonts.googleapis.com/css?family=Droid+Sans:400,700" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+</head>
+
+<body class="grey darken-4 white-text" style="font-family:'Droid Sans', sans-serif;">
+
+<nav id="topbar" class="grey darken-4 z-depth-0">
+  <div class="nav-wrapper">
+    <a href="#" class="brand-logo right" id="ytLogo">
+      <img src="yt-white.png" height="28">
+    </a>
+  </div>
+</nav>
+
+<ul id="slide-out" class="sidenav sidenav-fixed red darken-4">
+  <li class="center" style="margin-top:20px">
+    <a class="btn-floating btn-large red" id="searchToggle">
+      <i class="material-icons white-text">search</i>
+    </a>
+  </li>
+</ul>
+
+<main style="margin-left:300px;padding:24px">
+
+  <div id="searchContainer" class="hide">
+    <input
+      id="searchInput"
+      type="text"
+      class="browser-default grey darken-3 white-text"
+      placeholder="Search"
+      style="width:100%;font-size:22px;padding:20px;border-radius:2px"
+    >
+  </div>
+
+  <div id="videos" class="row"></div>
+
+</main>
+
+<div id="player" class="hide" style="position:fixed;top:0;left:0;width:100%;height:100%;background:black;z-index:1000">
+  <iframe id="playerFrame" style="width:100%;height:100%" allowfullscreen></iframe>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+<script>
+const videos=document.getElementById("videos")
+const searchInput=document.getElementById("searchInput")
+const searchContainer=document.getElementById("searchContainer")
+const ytLogo=document.getElementById("ytLogo")
+const topbar=document.getElementById("topbar")
+const player=document.getElementById("player")
+const playerFrame=document.getElementById("playerFrame")
+
+document.addEventListener("DOMContentLoaded",()=>{
+M.Sidenav.init(document.querySelectorAll(".sidenav"))
+loadPopular()
+})
+
+document.getElementById("searchToggle").onclick=()=>{
+videos.innerHTML=""
+searchContainer.classList.remove("hide")
+topbar.classList.add("hide")
+ytLogo.classList.add("hide")
+searchInput.focus()
+}
+
+searchInput.addEventListener("keydown",e=>{
+if(e.key==="Enter" && searchInput.value.trim()!==""){
+searchVideos(searchInput.value)
+}
+})
+
+document.addEventListener("keydown",e=>{
+if(!player.classList.contains("hide") && e.key==="Escape"){
+closePlayer()
+}
+})
+
+function loadPopular(){
+fetch("https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&maxResults=12&key=AIzaSyAxMRxshEh3_VtrMGIiyQ3jF4i37Y5M9d4")
+.then(r=>r.json())
+.then(d=>render(d.items))
+}
+
+function searchVideos(q){
+fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q="+encodeURIComponent(q)+"&key=AIzaSyAxMRxshEh3_VtrMGIiyQ3jF4i37Y5M9d4")
+.then(r=>r.json())
+.then(d=>render(d.items))
+}
+
+function render(items){
+videos.innerHTML=""
+items.forEach(v=>{
+const id=v.id.videoId||v.id
+const s=v.snippet
+const el=document.createElement("div")
+el.className="col s12 m6 l4"
+el.innerHTML=`
+<div class="card grey darken-3">
+  <div class="card-image">
+    <img class="responsive-img" src="${s.thumbnails.high.url}">
+  </div>
+  <div class="card-content white-text">
+    <div style="font-weight:700">${s.title}</div>
+    <div class="grey-text text-lighten-1" style="font-size:14px;margin-top:4px">
+      ${s.channelTitle} • ${timeAgo(s.publishedAt)}
+    </div>
+  </div>
+</div>`
+el.onclick=()=>openPlayer(id)
+videos.appendChild(el)
+})
+}
+
+function openPlayer(id){
+player.classList.remove("hide")
+playerFrame.src="https://www.youtube.com/embed/"+id+"?autoplay=1&controls=1"
+}
+
+function closePlayer(){
+playerFrame.src=""
+player.classList.add("hide")
+}
+
+function timeAgo(date){
+const s=Math.floor((new Date()-new Date(date))/1000)
+const t=[["year",31536000],["month",2592000],["week",604800],["day",86400],["hour",3600],["minute",60]]
+for(const i of t){
+const v=Math.floor(s/i[1])
+if(v>=1)return v+" "+i[0]+(v>1?"s":"")+" ago"
+}
+return"just now"
+}
+</script>
+
+</body>
+</html>
